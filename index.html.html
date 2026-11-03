@@ -115,7 +115,7 @@ async function toggleRec(){
       const rec={ch:CH[ci].t,kr,en,blob,time:Date.now()};
       await saveRec(rec);lastRec=rec;
       btn.textContent='🎤 녹음하기';btn.classList.remove('on');
-      $('myBtn').disabled=false;$('msg').textContent='💾 녹음 저장 완료!';
+      $('myBtn').disabled=false;$('shBtn').disabled=false;$('msg').textContent='💾 녹음 저장 완료!';
       showRecs();
     };
     recorder.start();btn.textContent='⏹ 멈추기';btn.classList.add('on');$('msg').textContent='🎙 문장을 소리 내어 읽어봐요!';
@@ -123,6 +123,19 @@ async function toggleRec(){
 }
 function playLast(){if(!lastRec)return;const a=new Audio(URL.createObjectURL(lastRec.blob));a.play();}
 
+function recFile(r){
+  const ext=r.blob.type.includes('mp4')?'m4a':r.blob.type.includes('ogg')?'ogg':'webm';
+  return new File([r.blob],`${r.en.replace(/[^a-z ]/gi,'').replace(/ /g,'_')}_${r.time}.${ext}`,{type:r.blob.type});
+}
+async function shareRec(r){
+  const f=recFile(r);
+  if(navigator.canShare&&navigator.canShare({files:[f]})){
+    try{await navigator.share({files:[f],title:'영어 녹음',text:`${r.ch} · ${r.en}`});}catch(e){}
+  }else{
+    const a=document.createElement('a');a.href=URL.createObjectURL(r.blob);a.download=f.name;a.click();
+    alert('이 기기에서는 바로 공유가 안 돼서 파일로 저장했어요. 저장된 파일을 카톡으로 보내주세요.');
+  }
+}
 async function showRecs(){
   const list=(await allRec()||[]).reverse();
   const box=$('recs');box.innerHTML=list.length?'':'<div class="small">아직 녹음이 없어요.</div>';
@@ -134,7 +147,8 @@ async function showRecs(){
     const a=document.createElement('a');a.href=url;a.download=`${r.en.replace(/[^a-z ]/gi,'').replace(/ /g,'_')}_${r.time}.${ext(r.blob)}`;a.textContent='⬇ 저장';
     const x=document.createElement('button');x.textContent='🗑 삭제';
     x.onclick=async()=>{if(confirm('이 녹음을 삭제할까요?')){await delRec(r.id);showRecs();}};
-    d.append(a,x);box.appendChild(d);
+    const s=document.createElement('button');s.textContent='📤 공유';s.onclick=()=>shareRec(r);
+    d.append(s,a,x);box.appendChild(d);
   });
 }
 
@@ -160,6 +174,7 @@ function load(){
     <button class="btn snd" onclick="speak(CH[ci].q[qi][1])">🔊 듣기</button>
     <button class="btn rec" id="recBtn" onclick="toggleRec()">🎤 녹음하기</button>
     <button class="btn ply" id="myBtn" onclick="playLast()" disabled>▶ 내 목소리</button>
+    <button class="btn nxt" id="shBtn" onclick="shareRec(lastRec)" disabled>📤 엄마께 보내기</button>
     <button class="btn gray" onclick="load()">↺ 다시</button>
     <button class="btn nxt" id="nxt" style="display:none" onclick="qi++;load()">다음 ➡️</button>
   </div>`;
