@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>야나두 영어 복습 게임 v2</title>
+<style>
+:root{--bg:#f7f9fc;--card:#fff;--tx:#333;--pink:#ff6b6b;--blue:#4da6ff;--green:#2ecc71;--org:#e67e22;--line:#ddd}
+@media (prefers-color-scheme:dark){:root{--bg:#1b1f27;--card:#272c36;--tx:#eee;--line:#444}}
+*{box-sizing:border-box}
+body{font-family:'Malgun Gothic','Apple SD Gothic Neo',sans-serif;background:var(--bg);color:var(--tx);margin:0;padding:14px}
+.wrap{max-width:640px;margin:0 auto}
+h1{color:var(--pink);font-size:22px;text-align:center;margin:6px 0 12px}
+.card{background:var(--card);border-radius:14px;padding:18px;box-shadow:0 3px 10px rgba(0,0,0,.1);margin-bottom:14px}
+.tabs{display:flex;flex-wrap:wrap;gap:6px;justify-content:center;margin-bottom:12px}
+.tab{border:2px solid var(--blue);background:transparent;color:var(--blue);padding:6px 12px;border-radius:18px;font-size:14px;font-weight:bold;cursor:pointer}
+.tab.on{background:var(--blue);color:#fff}
+.prog{text-align:center;font-size:14px;opacity:.7}
+.kr{font-size:21px;font-weight:bold;text-align:center;margin:10px 0}
+.ans{min-height:52px;border-bottom:3px solid var(--line);padding:8px;display:flex;flex-wrap:wrap;gap:6px;align-items:center;justify-content:center}
+.pool{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin:16px 0;min-height:48px}
+.w{background:var(--blue);color:#fff;border:0;padding:10px 15px;border-radius:20px;font-size:18px;font-weight:bold;cursor:pointer}
+.w.used{visibility:hidden}
+.ans .w{background:#0056b3}
+.msg{text-align:center;font-size:18px;font-weight:bold;min-height:28px;margin:6px 0}
+.row{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin-top:10px}
+.btn{border:0;color:#fff;padding:11px 18px;border-radius:12px;font-size:16px;font-weight:bold;cursor:pointer}
+.btn:disabled{opacity:.4;cursor:default}
+.snd{background:var(--org)}.rec{background:var(--pink)}.rec.on{background:#c0392b;animation:p 1s infinite}.ply{background:var(--green)}.nxt{background:#8e44ad}.gray{background:#888}
+@keyframes p{50%{opacity:.55}}
+h2{font-size:17px;margin:0 0 10px}
+.item{border-top:1px solid var(--line);padding:10px 0;font-size:14px}
+.item b{display:block;margin-bottom:4px}
+.item audio{width:100%;margin:4px 0}
+.item a,.item button{font-size:13px;margin-right:8px}
+.fin{text-align:center;font-size:20px;line-height:1.7}
+.small{font-size:13px;opacity:.7;text-align:center}
+</style>
+</head>
+<body>
+<div class="wrap">
+<h1>⭐ 야나두 영어 복습 미션 ⭐</h1>
+<div class="tabs" id="tabs"></div>
+<div class="card" id="game"></div>
+<div class="card">
+  <h2>🎧 내 녹음 모음</h2>
+  <div id="recs"></div>
+  <div class="small">녹음은 이 기기의 이 브라우저에만 저장돼요. 백업은 '저장' 링크로 파일을 받아두세요.</div>
+</div>
+</div>
+
+<script>
+/* ===== 데이터: 단원을 추가하려면 아래 배열에 같은 형식으로 붙여넣기 ===== */
+const CH=[
+{t:"1강 Waking Up",q:[
+["나는 알람을 듣는다.","I hear the alarm."],["나는 알람을 끈다.","I turn off the alarm."],["나는 기지개를 켠다.","I stretch."],
+["나는 폰을 확인한다.","I check my phone."],["나는 침대에서 나온다.","I get out of bed."],["나는 침대를 정리한다.","I make the bed."]],
+story:"Every morning, I hear the alarm. I turn it off right away. I stretch and check my phone. After a little while, I get out of bed and make the bed."},
+{t:"4강 Eating at Home",q:[
+["나는 식탁을 닦는다.","I clean the table."],["나는 수저를 놓는다.","I set the table."],["나는 냉장고를 연다.","I open the refrigerator."],
+["나는 반찬을 꺼낸다.","I take out side dishes."],["나는 밥을 그릇에 푼다.","I scoop rice into a bowl."],["나는 식탁에 앉는다.","I sit at the table."]],
+story:"I clean the table before I set the table. I open the refrigerator to take out some side dishes. I scoop freshly cooked rice into a bowl and sit at the table."},
+{t:"8강 Taking a Rest",q:[
+["나는 하루 동안 쉰다.","I take a day off."],["나는 멍 때린다.","I zone out."],["나는 휴대폰을 가지고 논다.","I play with my cellphone."],
+["나는 TV 채널을 돌린다.","I flip through TV channels."],["나는 간식을 먹는다.","I munch on snacks."],["나는 잠깐 존다.","I doze off."]],
+story:"I take a day off on a rainy day. I zone out for a bit. Then I play with my cellphone for hours. Next, I flip through TV channels and munch on snacks. I doze off in between."},
+{t:"10강 Training at Home",q:[
+["나는 매트를 깐다.","I roll out the mat."],["나는 몸을 스트레칭한다.","I stretch my body."],["나는 포즈를 취한다.","I do the pose."],
+["나는 자세를 유지한다.","I hold my form."],["나는 호흡을 조절한다.","I control my breathing."],["나는 거울로 나를 본다.","I look at myself in the mirror."]],
+story:"I roll out the mat in the living room and stretch my body for the first ten minutes. I do the pose and hold each pose for thirty seconds. I try to control my breathing. After the yoga training, I look at myself in the mirror."},
+{t:"28강 Going to the Gym",q:[
+["나는 헬스장에 간다.","I go to the gym."],["나는 운동복으로 갈아입는다.","I change into gym clothes."],["나는 몸을 푼다.","I warm up my body."],
+["나는 유산소 운동을 한다.","I do cardio."],["나는 웨이트를 한다.","I lift weights."],["나는 땀을 닦는다.","I wipe off my sweat."]],
+story:"I go to the gym. After I arrive, I change into gym clothes and warm up my body. Then I do cardio for twenty minutes. Also, I lift weights to build muscle. When I'm done, I wipe off my sweat."}
+];
+
+/* ===== 유틸 ===== */
+const $=id=>document.getElementById(id);
+let ci=0,qi=0,placed=[],pool=[],done=false,recorder=null,lastRec=null;
+
+/* ===== 소리 (브라우저 음성합성) ===== */
+function speak(text){
+  if(!('speechSynthesis' in window)){alert('이 브라우저는 음성 읽기를 지원하지 않아요.');return;}
+  speechSynthesis.cancel();
+  const u=new SpeechSynthesisUtterance(text);u.lang='en-US';u.rate=.85;
+  const v=speechSynthesis.getVoices().find(v=>v.lang&&v.lang.replace('_','-').startsWith('en-US'));
+  if(v)u.voice=v;
+  speechSynthesis.speak(u);
+}
+if('speechSynthesis' in window)speechSynthesis.onvoiceschanged=()=>{};
+
+/* ===== 녹음 저장소 (IndexedDB) ===== */
+let _db;
+function db(){return _db||(_db=new Promise((res,rej)=>{const r=indexedDB.open('yanadoo-rec',1);
+  r.onupgradeneeded=()=>r.result.createObjectStore('rec',{keyPath:'id',autoIncrement:true});
+  r.onsuccess=()=>res(r.result);r.onerror=()=>rej(r.error);}));}
+async function tx(mode,fn){const d=await db();return new Promise((res,rej)=>{const t=d.transaction('rec',mode);const rq=fn(t.objectStore('rec'));t.oncomplete=()=>res(rq&&rq.result);t.onerror=()=>rej(t.error);});}
+const saveRec=r=>tx('readwrite',s=>s.add(r));
+const allRec=()=>tx('readonly',s=>s.getAll());
+const delRec=id=>tx('readwrite',s=>s.delete(id));
+
+async function toggleRec(){
+  const btn=$('recBtn');
+  if(recorder&&recorder.state==='recording'){recorder.stop();return;}
+  if(!navigator.mediaDevices||!window.MediaRecorder){alert('이 브라우저는 녹음을 지원하지 않아요. (https 주소 또는 최신 크롬/사파리에서 열어주세요)');return;}
+  try{
+    const st=await navigator.mediaDevices.getUserMedia({audio:true});
+    const mime=['audio/webm','audio/mp4','audio/ogg'].find(m=>MediaRecorder.isTypeSupported(m))||'';
+    const chunks=[];recorder=new MediaRecorder(st,mime?{mimeType:mime}:undefined);
+    recorder.ondataavailable=e=>e.data.size&&chunks.push(e.data);
+    recorder.onstop=async()=>{
+      st.getTracks().forEach(t=>t.stop());
+      const blob=new Blob(chunks,{type:recorder.mimeType||mime||'audio/webm'});
+      const [kr,en]=CH[ci].q[qi];
+      const rec={ch:CH[ci].t,kr,en,blob,time:Date.now()};
+      await saveRec(rec);lastRec=rec;
+      btn.textContent='🎤 녹음하기';btn.classList.remove('on');
+      $('myBtn').disabled=false;$('msg').textContent='💾 녹음 저장 완료!';
+      showRecs();
+    };
+    recorder.start();btn.textContent='⏹ 멈추기';btn.classList.add('on');$('msg').textContent='🎙 문장을 소리 내어 읽어봐요!';
+  }catch(e){alert('마이크를 사용할 수 없어요. 마이크 권한을 허용해주세요.');}
+}
+function playLast(){if(!lastRec)return;const a=new Audio(URL.createObjectURL(lastRec.blob));a.play();}
+
+async function showRecs(){
+  const list=(await allRec()||[]).reverse();
+  const box=$('recs');box.innerHTML=list.length?'':'<div class="small">아직 녹음이 없어요.</div>';
+  const ext=b=>b.type.includes('mp4')?'m4a':b.type.includes('ogg')?'ogg':'webm';
+  list.forEach(r=>{
+    const url=URL.createObjectURL(r.blob);
+    const d=document.createElement('div');d.className='item';
+    d.innerHTML=`<b>${r.ch} · ${r.en}</b><span>${new Date(r.time).toLocaleString('ko-KR')}</span><audio controls src="${url}"></audio>`;
+    const a=document.createElement('a');a.href=url;a.download=`${r.en.replace(/[^a-z ]/gi,'').replace(/ /g,'_')}_${r.time}.${ext(r.blob)}`;a.textContent='⬇ 저장';
+    const x=document.createElement('button');x.textContent='🗑 삭제';
+    x.onclick=async()=>{if(confirm('이 녹음을 삭제할까요?')){await delRec(r.id);showRecs();}};
+    d.append(a,x);box.appendChild(d);
+  });
+}
+
+/* ===== 게임 ===== */
+function tabs(){
+  $('tabs').innerHTML='';
+  CH.forEach((c,i)=>{const b=document.createElement('button');b.className='tab'+(i===ci?' on':'');b.textContent=c.t;
+    b.onclick=()=>{ci=i;qi=0;load();tabs();};$('tabs').appendChild(b);});
+}
+function load(){
+  if(recorder&&recorder.state==='recording')recorder.stop();
+  lastRec=null;done=false;placed=[];
+  if(qi>=CH[ci].q.length){finish();return;}
+  const [kr,en]=CH[ci].q[qi];
+  pool=en.split(' ').map((w,i)=>({w,i,used:false})).sort(()=>Math.random()-.5);
+  $('game').innerHTML=`
+  <div class="prog">${CH[ci].t} · ${qi+1} / ${CH[ci].q.length}</div>
+  <div class="kr">${kr}</div>
+  <div class="ans" id="ans"></div>
+  <div class="msg" id="msg"></div>
+  <div class="pool" id="pool"></div>
+  <div class="row">
+    <button class="btn snd" onclick="speak(CH[ci].q[qi][1])">🔊 듣기</button>
+    <button class="btn rec" id="recBtn" onclick="toggleRec()">🎤 녹음하기</button>
+    <button class="btn ply" id="myBtn" onclick="playLast()" disabled>▶ 내 목소리</button>
+    <button class="btn gray" onclick="load()">↺ 다시</button>
+    <button class="btn nxt" id="nxt" style="display:none" onclick="qi++;load()">다음 ➡️</button>
+  </div>`;
+  draw();
+}
+function draw(){
+  $('ans').innerHTML='';$('pool').innerHTML='';
+  placed.forEach((p,k)=>{const b=document.createElement('button');b.className='w';b.textContent=p.w;
+    b.onclick=()=>{if(done)return;pool.find(x=>x.i===p.i).used=false;placed.splice(k,1);draw();};$('ans').appendChild(b);});
+  pool.forEach(p=>{const b=document.createElement('button');b.className='w'+(p.used?' used':'');b.textContent=p.w;
+    b.onclick=()=>{if(p.used||done)return;p.used=true;placed.push(p);draw();check();};$('pool').appendChild(b);});
+}
+function check(){
+  const en=CH[ci].q[qi][1];
+  if(placed.length!==pool.length)return;
+  if(placed.map(p=>p.w).join(' ')===en){
+    done=true;$('msg').style.color='#2ecc71';$('msg').textContent='⭕ 정답이야! 소리 듣고 따라 읽어봐요 🎤';
+    $('nxt').style.display='inline-block';speak(en);
+  }else{
+    $('msg').style.color='#e74c3c';$('msg').textContent='😎 아쉬워! 단어를 눌러서 빼고 다시 놓아봐';
+  }
+}
+function finish(){
+  $('game').innerHTML=`<div class="fin">🎉 ${CH[ci].t} 미션 완료! 🎉<br>오늘도 정말 잘했어 😍</div>
+  <div class="row">
+    <button class="btn snd" onclick="speak(CH[ci].story)">🔊 1분 말하기 전체 듣기</button>
+    <button class="btn gray" onclick="qi=0;load()">↺ 처음부터</button>
+  </div>`;
+}
+tabs();load();showRecs();
+</script>
+</body>
+</html>
